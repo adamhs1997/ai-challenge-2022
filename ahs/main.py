@@ -7,6 +7,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import GaussianNB, ComplementNB
 from sklearn.neural_network import MLPClassifier
 from sklearn.svm import LinearSVC
+from sklearn.model_selection import GridSearchCV
+
 
 with open("trainData.csv", 'r') as f:
     train = np.array([list(map(int, next(f).strip().split(","))) for _ in range(10000)])
@@ -60,11 +62,11 @@ def classify_with_pca(classifier, n_components):
     print(type(classifier), accuracy_score(test_labels, preds))
 
 
-classify(GaussianNB())
-classify(ComplementNB())
-classify(LinearSVC())
-classify(RandomForestClassifier())
-classify(MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(5, 2), random_state=1))
+# classify(GaussianNB())
+# classify(ComplementNB())
+# classify(LinearSVC())
+# classify(RandomForestClassifier())
+# classify(MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(5, 2), random_state=1))
 
 """
 Without feature selection:
@@ -222,14 +224,14 @@ RFC: 19%
 MLP: 4%
 """
 
-# Dim red--get top 5% of features by X2 test
-top_5_f = select_best_percent(f_classif, 5)
-
-classify(GaussianNB(), top_5_f)
-classify(ComplementNB(), top_5_f)
-classify(LinearSVC(), top_5_f)
-classify(RandomForestClassifier(), top_5_f)
-classify(MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(5, 2), random_state=1), top_5_f)
+# # Dim red--get top 5% of features by X2 test
+# top_5_f = select_best_percent(f_classif, 5)
+#
+# classify(GaussianNB(), top_5_f)
+# classify(ComplementNB(), top_5_f)
+# classify(LinearSVC(), top_5_f)
+# classify(RandomForestClassifier(), top_5_f)
+# classify(MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(5, 2), random_state=1), top_5_f)
 
 """
 Without top 5% Fscore feature selection:
@@ -239,3 +241,30 @@ Linear: 6%
 RFC: 14%
 MLP: 4%
 """
+
+# More RFC Tuning
+# Based on https://www.datasciencelearner.com/how-to-improve-accuracy-of-random-forest-classifier/
+
+parameters = {
+    "n_estimators": [5, 10, 50, 100, 250],
+    "max_depth": [2, 4, 8, 16, 32, None]
+}
+
+print("start!")
+rfc = RandomForestClassifier()
+cv = GridSearchCV(rfc, parameters, cv=5)
+cv.fit(raw_train_data, train_labels)
+print("fit!")
+
+
+def display(results):
+    print(f'Best parameters are: {results.best_params_}')
+    print("\n")
+    mean_score = results.cv_results_['mean_test_score']
+    std_score = results.cv_results_['std_test_score']
+    params = results.cv_results_['params']
+    for mean,std,params in zip(mean_score,std_score,params):
+        print(f'{round(mean,3)} + or -{round(std,3)} for the {params}')
+
+
+display(cv)
